@@ -13,11 +13,11 @@ namespace StudentExercises5.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ExerciseController : ControllerBase
+    public class InstructorController : ControllerBase
     {
         private readonly IConfiguration _config;
 
-        public ExerciseController(IConfiguration config)
+        public InstructorController(IConfiguration config)
         {
             _config = config;
         }
@@ -32,38 +32,47 @@ namespace StudentExercises5.Controllers
 
 
         [HttpGet]
-        public async Task<IActionResult> GetAllExercises()
+        public async Task<IActionResult> GetInstructors()
         {
             using (SqlConnection conn = Connection)
             {
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = "SELECT Id, Name, Language FROM Exercise";
+                    cmd.CommandText = @"SELECT i.Id, i.FirstName, i.LastName, i.SlackHandle, i.CohortId, c.Name
+                        FROM Instructor i
+                        INNER JOIN Cohort c ON s.CohortId = c.Id";
                     SqlDataReader reader = cmd.ExecuteReader();
-                    List<Exercise> exercises = new List<Exercise>();
+                    List<Instructor> instructors = new List<Instructor>();
 
                     while (reader.Read())
                     {
-                        Exercise exercise = new Exercise
+                        Instructor instructor = new Instructor
                         {
                             Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            Name = reader.GetString(reader.GetOrdinal("Name")),
-                            Language = reader.GetString(reader.GetOrdinal("Language"))
+                            FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                            LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                            SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
+                            Cohort =
+                            {
+                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                Name = reader.GetString(reader.GetOrdinal("Name"))
+                            }
+
                         };
 
-                        exercises.Add(exercise);
+                        instructors.Add(instructor);
                     }
 
                     reader.Close();
 
-                    return Ok(exercises);
+                    return Ok(instructors);
                 }
             }
         }
 
-        [HttpGet("{id}", Name = "GetExercise")]
-        public async Task<IActionResult> GetExercise([FromRoute] int id)
+        [HttpGet("{id}", Name = "GetInstructor")]
+        public async Task<IActionResult> Get([FromRoute] int id)
         {
             using (SqlConnection conn = Connection)
             {
@@ -71,53 +80,64 @@ namespace StudentExercises5.Controllers
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = @"
-                        SELECT Id, Name, Language 
-                        FROM Exercise
+                        SELECT SELECT i.Id, i.FirstName, i.LastName, i.SlackHandle, i.CohortId, c.Name
+                        FROM Instructor i
+                        INNER JOIN Cohort c ON s.CohortId = c.Id
                         WHERE Id = @id";
                     cmd.Parameters.Add(new SqlParameter("@id", id));
                     SqlDataReader reader = cmd.ExecuteReader();
 
-                    Exercise exercise = null;
+                    Instructor instructor = null;
 
                     if (reader.Read())
                     {
-                        exercise = new Exercise
+                        instructor = new Instructor
                         {
                             Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            Name = reader.GetString(reader.GetOrdinal("Name")),
-                            Language = reader.GetString(reader.GetOrdinal("Language"))
+                            FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                            LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                            SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
+                            CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                            Cohort =
+                            {
+                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                Name = reader.GetString(reader.GetOrdinal("Name")),
+                                Language = reader.GetString(reader.GetOrdinal("Language"))
+                            }
                         };
                     }
                     reader.Close();
 
-                    return Ok(exercise);
+                    return Ok(instructor);
                 }
             }
         }
 
         [HttpPost]
-        public async Task<IActionResult> PostExercise([FromBody] Exercise exercise)
+        public async Task<IActionResult> PostInstructor([FromBody] Instructor instructor)
         {
             using (SqlConnection conn = Connection)
             {
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = @"INSERT INTO Exercise (Name, Language)
+                    cmd.CommandText = @"INSERT INTO Instructor (FirstName, LastName, SlackHandle, CohortId)
                                         OUTPUT INSERTED.Id
-                                        VALUES (@Name, @Language)";
-                    cmd.Parameters.Add(new SqlParameter("@Name", exercise.Name));
-                    cmd.Parameters.Add(new SqlParameter("@Language", exercise.Language));
+                                        VALUES (@FirstName, @LastName, @SlackHandle, @CohortId)";
+                    cmd.Parameters.Add(new SqlParameter("@FirstName", instructor.FirstName));
+                    cmd.Parameters.Add(new SqlParameter("@LastName", instructor.LastName));
+                    cmd.Parameters.Add(new SqlParameter("@SlackHandle", instructor.SlackHandle));
+                    cmd.Parameters.Add(new SqlParameter("@CohortId", instructor.CohortId));
 
-                    int newId = (int) cmd.ExecuteScalar();
-                    exercise.Id = newId;
-                    return CreatedAtRoute("GetExercise", new { id = newId }, exercise);
+                    int newId = (int)cmd.ExecuteScalar();
+                    instructor.Id = newId;
+                    return CreatedAtRoute("GetInstructor", new { id = newId }, instructor);
                 }
             }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutExercise([FromRoute] int id, [FromBody] Exercise exercise)
+        public async Task<IActionResult> PutInstructor([FromRoute] int id, [FromBody] Instructor instructor)
         {
             try
             {
@@ -126,12 +146,16 @@ namespace StudentExercises5.Controllers
                     conn.Open();
                     using (SqlCommand cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = @"UPDATE Exercise
-                                            SET Name = @Name,
-                                                Language = @Language
+                        cmd.CommandText = @"UPDATE Instructor
+                                            SET FirstName = @FirstName,
+                                                LastName = @LastName
+                                                SlackHandle = @SlackHandle
+                                                CohortId = @CohortId
                                             WHERE Id = @id";
-                        cmd.Parameters.Add(new SqlParameter("@Name", exercise.Name));
-                        cmd.Parameters.Add(new SqlParameter("@Language", exercise.Language));
+                        cmd.Parameters.Add(new SqlParameter("@FirstName", instructor.FirstName));
+                        cmd.Parameters.Add(new SqlParameter("@LastName", instructor.LastName));
+                        cmd.Parameters.Add(new SqlParameter("@SlackHandle", instructor.SlackHandle));
+                        cmd.Parameters.Add(new SqlParameter("@CohortId", instructor.CohortId));
                         cmd.Parameters.Add(new SqlParameter("@id", id));
 
                         int rowsAffected = cmd.ExecuteNonQuery();
@@ -145,7 +169,7 @@ namespace StudentExercises5.Controllers
             }
             catch (Exception)
             {
-                if (!ExerciseExists(id))
+                if (!InstructorExists(id))
                 {
                     return NotFound();
                 }
@@ -157,7 +181,7 @@ namespace StudentExercises5.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteExercise([FromRoute] int id)
+        public async Task<IActionResult> DeleteInstructor([FromRoute] int id)
         {
             try
             {
@@ -166,7 +190,7 @@ namespace StudentExercises5.Controllers
                     conn.Open();
                     using (SqlCommand cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = @"DELETE FROM Exercise WHERE Id = @id";
+                        cmd.CommandText = @"DELETE FROM Instructor WHERE Id = @id";
                         cmd.Parameters.Add(new SqlParameter("@id", id));
 
                         int rowsAffected = cmd.ExecuteNonQuery();
@@ -180,7 +204,7 @@ namespace StudentExercises5.Controllers
             }
             catch (Exception)
             {
-                if (!ExerciseExists(id))
+                if (!InstructorExists(id))
                 {
                     return NotFound();
                 }
@@ -191,7 +215,7 @@ namespace StudentExercises5.Controllers
             }
         }
 
-        private bool ExerciseExists(int id)
+        private bool InstructorExists(int id)
         {
             using (SqlConnection conn = Connection)
             {
@@ -199,8 +223,8 @@ namespace StudentExercises5.Controllers
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = @"
-                        SELECT Id, Name, Language
-                        FROM Exercise
+                        SELECT Id, FirstName, LastName, SlackHandle, CohortId
+                        FROM Instructor
                         WHERE Id = @id";
                     cmd.Parameters.Add(new SqlParameter("@id", id));
 
@@ -211,5 +235,5 @@ namespace StudentExercises5.Controllers
         }
     }
 }
-    
+
 

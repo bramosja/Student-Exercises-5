@@ -13,11 +13,11 @@ namespace StudentExercises5.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ExerciseController : ControllerBase
+    public class CohortController : ControllerBase
     {
         private readonly IConfiguration _config;
 
-        public ExerciseController(IConfiguration config)
+        public CohortController(IConfiguration config)
         {
             _config = config;
         }
@@ -32,38 +32,37 @@ namespace StudentExercises5.Controllers
 
 
         [HttpGet]
-        public async Task<IActionResult> GetAllExercises()
+        public async Task<IActionResult> GetAllCohorts()
         {
             using (SqlConnection conn = Connection)
             {
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = "SELECT Id, Name, Language FROM Exercise";
+                    cmd.CommandText = "SELECT Id, Name FROM Cohort";
                     SqlDataReader reader = cmd.ExecuteReader();
-                    List<Exercise> exercises = new List<Exercise>();
+                    List<Cohort> cohorts = new List<Cohort>();
 
                     while (reader.Read())
                     {
-                        Exercise exercise = new Exercise
+                        Cohort cohort = new Cohort
                         {
                             Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            Name = reader.GetString(reader.GetOrdinal("Name")),
-                            Language = reader.GetString(reader.GetOrdinal("Language"))
+                            Name = reader.GetString(reader.GetOrdinal("Name"))
                         };
 
-                        exercises.Add(exercise);
+                        cohorts.Add(cohort);
                     }
 
                     reader.Close();
 
-                    return Ok(exercises);
+                    return Ok(cohorts);
                 }
             }
         }
 
-        [HttpGet("{id}", Name = "GetExercise")]
-        public async Task<IActionResult> GetExercise([FromRoute] int id)
+        [HttpGet("{id}", Name = "GetCohort")]
+        public async Task<IActionResult> GetCohort([FromRoute] int id)
         {
             using (SqlConnection conn = Connection)
             {
@@ -71,53 +70,51 @@ namespace StudentExercises5.Controllers
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = @"
-                        SELECT Id, Name, Language 
-                        FROM Exercise
+                        SELECT Id, Name
+                        FROM Cohort
                         WHERE Id = @id";
                     cmd.Parameters.Add(new SqlParameter("@id", id));
                     SqlDataReader reader = cmd.ExecuteReader();
 
-                    Exercise exercise = null;
+                    Cohort cohort = null;
 
                     if (reader.Read())
                     {
-                        exercise = new Exercise
+                        cohort = new Cohort
                         {
                             Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            Name = reader.GetString(reader.GetOrdinal("Name")),
-                            Language = reader.GetString(reader.GetOrdinal("Language"))
+                            Name = reader.GetString(reader.GetOrdinal("Name"))
                         };
                     }
                     reader.Close();
 
-                    return Ok(exercise);
+                    return Ok(cohort);
                 }
             }
         }
 
         [HttpPost]
-        public async Task<IActionResult> PostExercise([FromBody] Exercise exercise)
+        public async Task<IActionResult> PostCohort([FromBody] Cohort cohort)
         {
             using (SqlConnection conn = Connection)
             {
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = @"INSERT INTO Exercise (Name, Language)
+                    cmd.CommandText = @"INSERT INTO Cohort (Name)
                                         OUTPUT INSERTED.Id
-                                        VALUES (@Name, @Language)";
-                    cmd.Parameters.Add(new SqlParameter("@Name", exercise.Name));
-                    cmd.Parameters.Add(new SqlParameter("@Language", exercise.Language));
+                                        VALUES (@Name)";
+                    cmd.Parameters.Add(new SqlParameter("@Name", cohort.Name));
 
-                    int newId = (int) cmd.ExecuteScalar();
-                    exercise.Id = newId;
-                    return CreatedAtRoute("GetExercise", new { id = newId }, exercise);
+                    int newId = (int)cmd.ExecuteScalar();
+                    cohort.Id = newId;
+                    return CreatedAtRoute("GetCohort", new { id = newId }, cohort);
                 }
             }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutExercise([FromRoute] int id, [FromBody] Exercise exercise)
+        public async Task<IActionResult> PutCohort([FromRoute] int id, [FromBody] Cohort cohort)
         {
             try
             {
@@ -126,12 +123,10 @@ namespace StudentExercises5.Controllers
                     conn.Open();
                     using (SqlCommand cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = @"UPDATE Exercise
+                        cmd.CommandText = @"UPDATE Cohort
                                             SET Name = @Name,
-                                                Language = @Language
                                             WHERE Id = @id";
-                        cmd.Parameters.Add(new SqlParameter("@Name", exercise.Name));
-                        cmd.Parameters.Add(new SqlParameter("@Language", exercise.Language));
+                        cmd.Parameters.Add(new SqlParameter("@Name", cohort.Name));
                         cmd.Parameters.Add(new SqlParameter("@id", id));
 
                         int rowsAffected = cmd.ExecuteNonQuery();
@@ -145,7 +140,7 @@ namespace StudentExercises5.Controllers
             }
             catch (Exception)
             {
-                if (!ExerciseExists(id))
+                if (!CohortExists(id))
                 {
                     return NotFound();
                 }
@@ -157,7 +152,7 @@ namespace StudentExercises5.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteExercise([FromRoute] int id)
+        public async Task<IActionResult> DeleteCohort([FromRoute] int id)
         {
             try
             {
@@ -166,7 +161,7 @@ namespace StudentExercises5.Controllers
                     conn.Open();
                     using (SqlCommand cmd = conn.CreateCommand())
                     {
-                        cmd.CommandText = @"DELETE FROM Exercise WHERE Id = @id";
+                        cmd.CommandText = @"DELETE FROM Cohort WHERE Id = @id";
                         cmd.Parameters.Add(new SqlParameter("@id", id));
 
                         int rowsAffected = cmd.ExecuteNonQuery();
@@ -180,7 +175,7 @@ namespace StudentExercises5.Controllers
             }
             catch (Exception)
             {
-                if (!ExerciseExists(id))
+                if (!CohortExists(id))
                 {
                     return NotFound();
                 }
@@ -191,7 +186,7 @@ namespace StudentExercises5.Controllers
             }
         }
 
-        private bool ExerciseExists(int id)
+        private bool CohortExists(int id)
         {
             using (SqlConnection conn = Connection)
             {
@@ -199,8 +194,8 @@ namespace StudentExercises5.Controllers
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = @"
-                        SELECT Id, Name, Language
-                        FROM Exercise
+                        SELECT Id, Name
+                        FROM Cohort
                         WHERE Id = @id";
                     cmd.Parameters.Add(new SqlParameter("@id", id));
 
@@ -211,5 +206,5 @@ namespace StudentExercises5.Controllers
         }
     }
 }
-    
+
 
