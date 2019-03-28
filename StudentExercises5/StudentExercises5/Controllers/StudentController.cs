@@ -32,39 +32,92 @@ namespace StudentExercises5.Controllers
 
 
         [HttpGet]
-        public async Task<IActionResult> GetAllStudents()
+        public async Task<IActionResult> Get(string include, string q)
         {
             using (SqlConnection conn = Connection)
             {
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = @"SELECT s.Id, s.FirstName, s.LastName, s.SlackHandle, s.CohortId, c.Name, e.Name
-                        FROM Student s
-                        INNER JOIN Cohort c ON s.CohortId = c.Id
-                        INNER JOIN StudentExercise t ON s.Id = t.StudentId
-                        INNER JOIN Exercise e ON t.ExerciseId = e.Id";
+                    if(include == "exercise")
+                    {
+                        cmd.CommandText = @"SELECT s.Id AS StudentId, 
+                                                s.FirstName, s.LastName,
+                                                s.SlackHandle, s.CohortId, 
+                                                c.Name AS CohortName,
+                                                e.id AS ExerciseId,
+                                                e.Name AS ExerciseName,
+                                                e.Language
+                                            FROM Student s
+                                            INNER JOIN Cohort c ON s.CohortId = c.Id
+                                            INNER JOIN StudentExercise t ON s.Id = t.StudentId
+                                            INNER JOIN Exercise e ON t.ExerciseId = e.Id
+                                            WHERE 1=1";
+                    }
+                    else
+                    {
+                        cmd.CommandText = @"SELECT s.Id AS StudentId, 
+                                                s.FirstName, s.LastName, 
+                                                s.SlackHandle, s.CohortId, 
+                                                c.Name AS CohortName
+                                            FROM Student s
+                                            INNER JOIN Cohort c ON s.CohortId = c.Id
+                                            INNER JOIN StudentExercise t ON s.Id = t.StudentId
+                                            WHERE 1 = 1";
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(q))
+                    {
+                        cmd.CommandText += @" AND  
+                                                (s.FirstName LIKE @q 
+                                                OR s.LastName LIKE @q 
+                                                OR s.SlackHandle LIKE @q)";
+                        cmd.Parameters.Add(new SqlParameter("@q", $"%{q}%"));
+                    }
+                    
                     SqlDataReader reader = cmd.ExecuteReader();
-                    List<Student> students = new List<Student>();
+
+                    Dictionary<int, Student> students = new Dictionary<int, Student>();
 
                     while (reader.Read())
                     {
-                        Student student = new Student
-                        {
-                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
-                            LastName = reader.GetString(reader.GetOrdinal("LastName")),
-                            SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
-                            CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
-                            Cohort = new Cohort
+                        int studentId = reader.GetInt32(reader.GetOrdinal("StudentId"));
+                        if (!students.ContainsKey(studentId)) {
+                            Student student = new Student
                             {
-                                Id = reader.GetInt32(reader.GetOrdinal("CohortId")),
-                                Name = reader.GetString(reader.GetOrdinal("Name"))
-                            },
-                            Exercises = new List<Exercise>()
-                        };
+                                Id = studentId,
+                                FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                                LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                                SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
+                                CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                                Cohort = new Cohort
+                                {
+                                    Id = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                                    Name = reader.GetString(reader.GetOrdinal("CohortName"))
+                                },
+                                Exercises = new List<Exercise>()
+                            };
 
-                        students.Add(student);
+                            students.Add(studentId, student);
+                        }
+
+
+
+                        if (include == "exercise")
+                        {
+                            if (!reader.IsDBNull(reader.GetOrdinal("ExerciseId")))
+                            {
+                                Student currentStudent = students[studentId];
+                                currentStudent.Exercises.Add(
+                                    new Exercise
+                                    {
+                                        Id = reader.GetInt32(reader.GetOrdinal("ExerciseId")),
+                                        Language = reader.GetString(reader.GetOrdinal("Language")),
+                                        Name = reader.GetString(reader.GetOrdinal("ExerciseName"))
+                                    }
+                                );
+                            }
+                        }
                     }
 
                     reader.Close();
