@@ -39,9 +39,11 @@ namespace StudentExercises5.Controllers
                 conn.Open();
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = @"SELECT s.Id, s.FirstName, s.LastName, s.SlackHandle, s.CohortId, c.Name
+                    cmd.CommandText = @"SELECT s.Id, s.FirstName, s.LastName, s.SlackHandle, s.CohortId, c.Name, e.Name
                         FROM Student s
-                        INNER JOIN Cohort c ON s.CohortId = c.Id";
+                        INNER JOIN Cohort c ON s.CohortId = c.Id
+                        INNER JOIN StudentExercise t ON s.Id = t.StudentId
+                        INNER JOIN Exercise e ON t.ExerciseId = e.Id";
                     SqlDataReader reader = cmd.ExecuteReader();
                     List<Student> students = new List<Student>();
 
@@ -53,12 +55,13 @@ namespace StudentExercises5.Controllers
                             FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
                             LastName = reader.GetString(reader.GetOrdinal("LastName")),
                             SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
-                            Cohort =
+                            CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                            Cohort = new Cohort
                             {
-                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                Id = reader.GetInt32(reader.GetOrdinal("CohortId")),
                                 Name = reader.GetString(reader.GetOrdinal("Name"))
-                            }
-
+                            },
+                            Exercises = new List<Exercise>()
                         };
 
                         students.Add(student);
@@ -72,7 +75,7 @@ namespace StudentExercises5.Controllers
         }
 
         [HttpGet("{id}", Name = "GetStudent")]
-        public async Task<IActionResult> GetStudent([FromRoute] int id)
+        public async Task<IActionResult> Get([FromRoute] int id)
         {
             using (SqlConnection conn = Connection)
             {
@@ -80,10 +83,12 @@ namespace StudentExercises5.Controllers
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = @"
-                        SELECT SELECT s.Id, s.FirstName, s.LastName, s.SlackHandle, s.CohortId, c.Name
+                        SELECT s.Id, s.FirstName, s.LastName, s.SlackHandle, s.CohortId, c.Name, e.Name
                         FROM Student s
                         INNER JOIN Cohort c ON s.CohortId = c.Id
-                        WHERE Id = @id";
+                        INNER JOIN StudentExercise t ON s.Id = t.StudentId
+                        INNER JOIN Exercise e ON t.ExerciseId = e.Id
+                        WHERE s.Id = @id";
                     cmd.Parameters.Add(new SqlParameter("@id", id));
                     SqlDataReader reader = cmd.ExecuteReader();
 
@@ -98,12 +103,12 @@ namespace StudentExercises5.Controllers
                             LastName = reader.GetString(reader.GetOrdinal("LastName")),
                             SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
                             CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
-                            Cohort =
+                            Cohort = new Cohort
                             {
                                 Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                                Name = reader.GetString(reader.GetOrdinal("Name")),
-                                Language = reader.GetString(reader.GetOrdinal("Language"))
-                            }
+                                Name = reader.GetString(reader.GetOrdinal("Name"))
+                            },
+                            Exercises = new List<Exercise>()
                         };
                     }
                     reader.Close();

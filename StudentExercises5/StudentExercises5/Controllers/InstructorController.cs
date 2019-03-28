@@ -41,7 +41,7 @@ namespace StudentExercises5.Controllers
                 {
                     cmd.CommandText = @"SELECT i.Id, i.FirstName, i.LastName, i.SlackHandle, i.CohortId, c.Name
                         FROM Instructor i
-                        INNER JOIN Cohort c ON s.CohortId = c.Id";
+                        INNER JOIN Cohort c ON i.CohortId = c.Id";
                     SqlDataReader reader = cmd.ExecuteReader();
                     List<Instructor> instructors = new List<Instructor>();
 
@@ -53,9 +53,9 @@ namespace StudentExercises5.Controllers
                             FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
                             LastName = reader.GetString(reader.GetOrdinal("LastName")),
                             SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
-                            Cohort =
+                            Cohort = new Cohort
                             {
-                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                Id = reader.GetInt32(reader.GetOrdinal("CohortId")),
                                 Name = reader.GetString(reader.GetOrdinal("Name"))
                             }
 
@@ -101,8 +101,7 @@ namespace StudentExercises5.Controllers
                             Cohort =
                             {
                                 Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                                Name = reader.GetString(reader.GetOrdinal("Name")),
-                                Language = reader.GetString(reader.GetOrdinal("Language"))
+                                Name = reader.GetString(reader.GetOrdinal("Name"))
                             }
                         };
                     }
